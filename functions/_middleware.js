@@ -104,10 +104,7 @@ class UniversalHandler {
 
   text(textChunk) {
     if (this.currentSlot) {
-      const text = textChunk.text.trim();
-      if (text === "") return;
-
-      const textNode = { type: "text", content: text };
+      const textNode = { type: "text", content: textChunk.text };
 
       let fillNode = this.fillContent.get(this.currentSlot);
       if (fillNode) {
