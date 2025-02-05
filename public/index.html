@@ -1,0 +1,79 @@
+<include path="/layout">
+  <fill slot="title">
+    <title>Reinventing Server-Side Includes with Cloudflare Workers</title>
+  </fill>
+  <fill slot="header">
+    <h1>Reinventing Server-Side Includes with Cloudflare Workers</h1>
+  </fill>
+  <fill slot="content">
+    <p>I was setting up a personal blog recently, and the process quickly spiraled into a ridiculous setup ritual. Pick a static site generator, figure out where to host, configure deployment, wrangle CI/CD pipelines, and make peace with YAML. For what? A simple blog? Am I deploying the next Mars rover mission, or do I just want to write some words on the internet? What if I just want to write HTML and push it somewhere without jumping through hoops? Ok, maybe FTP isn’t cool anymore, but come on—committing to a Git repo is even easier. <code>git commit && git push</code> beats dragging and dropping files in some clunky dashboard any day of the week. And yet, even that wasn’t enough.</p>
+
+<p>Back in the early 2000s, I worked at a local web studio. My first real project? A massive product catalog for a local dessert manufacturer—50 pages, 10 items per page, all manually coded. The studio didn’t have a CMS, just some Perl scripts for contact forms and a guestbook (the true web 1.0 experience). Some pages were even in ASP. It was painful. Late nights of manually copy-pasting HTML, making sure navigation stayed consistent across dozens of files. Then, one day, someone in my local IRC channel changed my life: "Go buy a book about Apache and learn SSI." And just like that, everything got simpler.</p>
+
+<p>Server-Side Includes (SSI) were magic. One line:</p>
+
+<pre>
+&lt;!--#include virtual="/menu.html" --&gt;
+</pre>
+
+<p>And boom—shared content across all pages. No PHP, no CMS bloat, no build step. It just worked. We rolled SSI into several projects, and suddenly, managing HTML didn’t suck as much anymore. But of course, time marched on, and now? Try finding a serverless provider that supports SSI today. <strong>Good luck.</strong> Mention dynamic HTML in 2025, and someone will hand you a 300-page Next.js manual or suggest setting up GraphQL over Redis Pub/Sub. All I wanted was <code>&lt;include&gt;</code>—not a PhD in overengineering. Even Nginx needs to be compiled with the SSI module, and who’s got time for that? I’d rather spend my time making sure my coffee doesn’t go cold before I drink it. Honestly, I don’t even remember people using SSI back then either.</p>
+
+<p>So I decided to use plain HTML for my blog. But I wasn't going to deal with the same old headaches—updating navigation and pagination manually across multiple pages like it’s 2002. I considered Cloudflare Pages—great for hosting, but not for solving my real problem. Then it hit me: <strong>Cloudflare Workers!</strong> If I can intercept requests at the edge, why not bring back includes—like it’s 2002, but supercharged for 2025? No build step. No complex CI/CD pipelines. No YAML-induced headaches. Just HTML that works. Except, instead of relying on some outdated module, I could write a middleware for Cloudflare Workers. Keep it limited to actual HTML content, no remote fetch—just <code>env.ASSETS.fetch()</code>.</p>
+
+<p>It would be so nice if HTML could be dynamic on the server. But wait—doesn’t that mean I need a runtime? Well, sure. And if I wanted one, PHP has been around forever. But PHP and I have a complicated relationship. It’s like an old college friend who keeps inviting me to multi-level marketing schemes. I respect it, but I’m not getting involved. Even if I could stomach it, I'd still have to configure a web server with FCGI, and nobody wants that. Do any of the serverless providers even support PHP these days? Not really. Maybe some forgotten shared hosting service I haven’t touched in 20 years, and I’m not about to go on a nostalgia trip for cPanel and PHPMyAdmin. So I rolled my own.</p>
+
+<p>I built a small demo website using Cloudflare Workers to process SSI-like includes. In fact, this very website—<a href="https://ssi.artps.org">ssi.artps.org</a>—is built using this approach. You can check out the source code in the GitHub repository: <a href="https://github.com/YOUR_REPO_HERE">GitHub Repo</a>. Now, full disclosure: this implementation doesn't support nested or deep includes. Also, if you’re reading this here, you might notice that it breaks the DOM structure a little bit—I was too lazy to figure it out. For example, you can see that the space between this word and this link <a href="put-the-link-here">[put the link here]</a> gets removed. I didn’t need them, and honestly, I spent about four hours on this—taking breaks for coffee and push-ups. Priorities, you know?</p>
+
+<p>But let’s be clear—this is not your granddad’s SSI. Traditional Server-Side Includes were basic, pulling in raw HTML with zero flexibility. I took that old concept and gave it a 2025 glow-up, using a slots-based approach. Instead of static includes, this method allows dynamic content injection in a structured way, making it feel more like a lightweight templating system rather than just a dumb file stitcher. If you've used Vue, Svelte, or Phoenix LiveView, you'll recognize the slots pattern—self-contained, declarative, and easy to reason about. The idea is simple: define shared components (header, footer, menus) and use <code>&lt;include&gt;</code> tags to dynamically insert them into pages.</p>
+
+<p>Here's how it works:</p>
+
+<pre>
+&lt;include path="/layout.html"&gt;
+  &lt;fill slot="title"&gt;Welcome to My Site&lt;/fill&gt;
+  &lt;fill slot="header"&gt;
+    &lt;h1&gt;Main Page&lt;/h1&gt;
+  &lt;/fill&gt;
+  &lt;fill slot="content"&gt;
+    &lt;p&gt;This is the main content.&lt;/p&gt;
+  &lt;/fill&gt;
+&lt;/include&gt;
+</pre>
+
+<p>And then the layout:</p>
+
+<pre>
+&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;&lt;slot name="title"&gt;Default Title&lt;/slot&gt;&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;header&gt;
+      &lt;slot name="header"&gt;Default Header&lt;/slot&gt;
+    &lt;/header&gt;
+    &lt;main&gt;
+      &lt;slot name="content"&gt;Default Content&lt;/slot&gt;
+    &lt;/main&gt;
+    &lt;footer&gt;
+      &lt;include path="/footer.html"&gt;&lt;/include&gt;
+    &lt;/footer&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+<p>And a simple footer:</p>
+
+<pre>
+&lt;p&gt;&copy; 2025 My Simple Site&lt;/p&gt;
+</pre>
+
+<p>Not everything needs to be a React app. Seriously, I don’t need a virtual DOM just to display a paragraph of text. Maybe simple tools like this, built on web primitives, are still good enough for 99% of cases. The web was supposed to be simple. We just made it complicated. With Cloudflare Workers, I’m bringing back the good parts—fast, server-rendered, maintainable pages without the headaches of modern frontend tooling. No Terraform. No pipelines. No YAML-induced suffering.</p>
+
+<p><strong>Just includes, like it’s 2002 again.</strong></p>
+
+<p>And you know what? It just works. Like a microwave—press a button, get results, no Kubernetes required.</p>
+
+<p>If you want to take it further with me, let's build it together—contact me at <a href="mailto:art@artps.org">art@artps.org</a>. I'm also actively looking for a job right now—whether it's pushing the boundaries of server-side rendering, hacking on edge computing, or solving deeply technical problems. If you need someone who thrives on simplifying complexity, loves building pragmatic solutions, and has a <strong>super crazy sick brain</strong> that refuses to accept over-engineering, then let's talk. Reach out at <a href="mailto:art@artps.org">art@artps.org</a>.</p>
+
+  </fill>
+</include>
